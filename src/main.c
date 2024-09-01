@@ -32,8 +32,6 @@ static void VCountIntr(void);
 static void SerialIntr(void);
 static void IntrDummy(void);
 
-extern void CB2_FlashNotDetectedScreen(void);
-
 // Defined in the linker script so that the test build can override it.
 extern void gInitialMainCB2(void);
 
@@ -116,7 +114,7 @@ void AgbMain()
     gSoftResetDisabled = FALSE;
 
     if (gFlashMemoryPresent != TRUE)
-        SetMainCallback2(CB2_FlashNotDetectedScreen);
+        SetMainCallback2(NULL);
 
     gLinkTransferringData = FALSE;
 
@@ -451,7 +449,17 @@ static void WaitForVBlank(void)
 {
     gMain.intrCheck &= ~INTR_FLAG_VBLANK;
 
-    asm("swi 0x5");
+    if (gWirelessCommType != 0)
+    {
+        // Desynchronization may occur if wireless adapter is connected
+        // and we call VBlankIntrWait();
+        while (!(gMain.intrCheck & INTR_FLAG_VBLANK))
+            ;
+    }
+    else
+    {
+        VBlankIntrWait();
+    }
 }
 
 void SetTrainerHillVBlankCounter(u32 *counter)
